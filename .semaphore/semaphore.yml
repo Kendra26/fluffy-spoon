@@ -19,8 +19,8 @@ blocks:
             - sudo apt install -y aria2
             - echo "📥 Downloading torrent..."
             - mkdir -p downloads 
-            - curl -s https://klipit.in/oly44877 | grep -oE 'http[s]?://[^"'\'' >]+?\.(mp4|mkv)' > links.txt
-            - aria2c --dir=downloads -i links.txt
+            - curl -s https://klipit.in/oly44877 | grep -oP 'https?://[^"'\'' >]+?\.(mp4|mkv)' > download_links.txt
+            - aria2c --dir=downloads -i download_links.txt
             
             - echo "📤 Uploading files to PixelDrain..."
             - |
