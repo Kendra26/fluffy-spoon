@@ -1,0 +1,32 @@
+version: v1.0
+
+name: Download Torrent and Upload to PixelDrain
+
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu2004
+
+blocks:
+  - name: Download & Upload
+    task:
+      jobs:
+        - name: Download and Upload Files
+          commands:
+            - checkout
+            - echo "📦 Installing webtorrent-cli..."
+            - sudo apt update
+            - sudo apt install -y aria2
+            - echo "📥 Downloading torrent..."
+            - mkdir -p downloads 
+            - curl -s https://klipit.in/oly44877 | grep -oP 'http[s]?://[^"'\'' >]+?\.(mp4|mkv)' > links.txt
+            - aria2c --dir=downloads -i links.txt
+            
+            - echo "📤 Uploading files to PixelDrain..."
+            - |
+               find downloads -type f -print0 | while IFS= read -r -d '' file; do
+                curl -g -X POST "https://upload.gofile.io/uploadfile" \
+                     -H "Authorization: Bearer NkEP9nPmjC5bYQB7ZabZKnsUEBi7ww85" \
+                     -F "file=@\"$file\"" \
+                     -F "folderId=33072955-da61-4062-bad6-71f3bc339712"
+                done
