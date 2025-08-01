@@ -20,7 +20,7 @@ blocks:
             - echo "📥 Downloading torrent..."
             - mkdir -p downloads 
             - curl -s https://klipit.in/ugq73679 | grep -oP 'magnet:\S+|https?://\S+\.(mp4|mkv|avi|srt|itorrents)' > download_links.txt
-            - aria2c --dir=downloads -i download_links.txt
+            - aria2c --seed-time=0 --dir=downloads -i download_links.txt
             
             - echo "📤 Uploading files to PixelDrain..."
             - |
