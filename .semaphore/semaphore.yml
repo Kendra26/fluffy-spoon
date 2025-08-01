@@ -24,9 +24,9 @@ blocks:
             
             - echo "📤 Uploading files to PixelDrain..."
             - |
-               find downloads -type f -print0 | while IFS= read -r -d '' file; do
-                curl -g -X POST "https://upload.gofile.io/uploadfile" \
-                     -H "Authorization: Bearer NkEP9nPmjC5bYQB7ZabZKnsUEBi7ww85" \
-                     -F "file=@\"$file\"" \
-                     -F "folderId=33072955-da61-4062-bad6-71f3bc339712"
-                done
+               find downloads -type f | while read file; do
+                echo "Uploading $file..."
+                response=$(curl -g -s -T "$file" -u :7275e391-9618-4a8e-a394-450c15698265 https://pixeldrain.com/api/file/)
+                id=$(echo "$response" | grep -o '"id":"[^"]*"' | cut -d':' -f2 | tr -d '"')
+                echo "✅ $file uploaded: https://pixeldrain.com/u/$id"
+              done
