@@ -19,7 +19,7 @@ blocks:
             - sudo apt install -y aria2
             - echo "📥 Downloading torrent..."
             - mkdir -p downloads 
-            - curl -s https://klipit.in/ugq73679 | grep -oP 'magnet:\S+|https?://\S+\.(mp4|mkv|avi|srt|itorrents|torrenting)' > download_links.txt
+            - curl -s https://klipit.in/ugq73679 | awk '/Start/,/Stop/' | grep -oP 'http[s]?://[^"'\'' >]+' > download_links.txt
             - wget --content-disposition -i download_links.txt 
             - aria2c --dir=downloads -i *.torrent 
             
