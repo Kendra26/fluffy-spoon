@@ -20,13 +20,13 @@ blocks:
             - echo "📥 Downloading torrent..."
             - mkdir -p downloads 
             - curl -s https://klipit.in/ugq73679 | grep -oP 'magnet:\S+|https?://\S+\.(mp4|mkv|avi|srt|itorrents)' > download_links.txt
-            - aria2c --dir=downloads -i download_links.txt
+            - aria2c --seed-time=0 --dir=downloads -i download_links.txt
             
             - echo "📤 Uploading files to PixelDrain..."
             - |
                find downloads -type f -print0 | while IFS= read -r -d '' file; do
                 curl -g -X POST "https://upload.gofile.io/uploadfile" \
-                     -H "Authorization: Bearer D6TLIacgqNHu93hAjSOBgyZxOWEUOmzO" \
+                     -H "Authorization: Bearer RanoNjbg7Tuf8ogQFWD2rn4Mldae37dz" \
                      -F "file=@\"$file\"" \
-                     -F "folderId=70ea91ff-8978-4a33-8e81-9102de1525d0"
+                     -F "folderId=0e668cde-f98f-4b78-907b-7f3e2b854949"
                 done
