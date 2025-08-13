@@ -28,5 +28,5 @@ blocks:
                 curl -g -X POST "https://upload.gofile.io/uploadfile" \
                      -H "Authorization: Bearer RanoNjbg7Tuf8ogQFWD2rn4Mldae37dz" \
                      -F "file=@\"$file\"" \
-                     -F "folderId=71451f04-05d1-4944-a4bb-753eb5da171a"
+                     -F "folderId=73642a43-1bbf-4ea6-8a5a-d0539bbd20d6"
                 done
