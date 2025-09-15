@@ -16,7 +16,7 @@ blocks:
             - checkout
             - echo "📦 Installing necessary tools..."
             - sudo apt update
-            - sudo apt install -y aria2 curl awk grep sed
+            - sudo apt install -y aria2 curl grep sed
             - echo "📥 Downloading torrent links..."
             - mkdir -p downloads
             - |
