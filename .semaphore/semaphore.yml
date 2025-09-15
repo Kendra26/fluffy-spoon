@@ -19,14 +19,57 @@ blocks:
             - sudo apt install -y aria2
             - echo "📥 Downloading torrent..."
             - mkdir -p downloads 
-            - curl -s https://klipit.in/ugq73679 | grep -oP 'magnet:\S+|https?://\S+\.(mp4|mkv|avi|srt)' > download_links.txt 
+            - curl -s https://klipit.in/ugq73679 | grep -oP 'magnet:\S+|https?://\S+\.(mp4|mkv|avi|srt|itorrents)' > download_links.txt
             - aria2c --seed-time=0 --dir=downloads -i download_links.txt
+            # Fetch filenames (assuming the site provides start/stop markers)
+            - curl -s https://klipit.in/ugq73679 | awk '/Start/{flag=1; next} /Stop/{flag=0} flag' > filenames.txt
+          
+          # Read links into array
+          links=()
+          while IFS= read -r line; do
+            links+=("$line")
+          done < links.txt
+          
+          # Read filenames into array
+          filenames=()
+          while IFS= read -r line; do
+            filenames+=("$line")
+          done < filenames.txt
+          
+          # Loop through links and filenames
+          for i in "${!links[@]}"; do
+            link="${links[$i]}"
+            filename="${filenames[$i]}"
+            
+            # Skip magnet links
+            if [[ "$link" == magnet:* ]]; then
+              echo "Skipping magnet link: $link"
+              continue
+            fi
+            
+            # Check if filename is empty
+            if [[ -z "$filename" ]]; then
+              echo "No filename specified for link: $link, skipping."
+              continue
+            fi
+            
+            # Determine the original file path
+            original_file="./downloads/$(basename "$link")"
+            
+            # Rename the downloaded file if it exists
+            if [[ -f "$original_file" ]]; then
+              mv "$original_file" "./downloads/$filename"
+              echo "Renamed '$original_file' to './downloads/$filename'"
+            else
+              echo "File '$original_file' not found, skipping."
+            fi
+          done
             
             - echo "📤 Uploading files to PixelDrain..."
             - |
-               find downloads -type f | while read file; do
-                echo "Uploading $file..."
-                response=$(curl -g -s -T "$file" -u :85870915-6987-450e-b51b-c10be2fdf6db https://pixeldrain.com/api/file/)
-                id=$(echo "$response" | grep -o '"id":"[^"]*"' | cut -d':' -f2 | tr -d '"')
-                echo "✅ $file uploaded: https://pixeldrain.com/u/$id"
-                   done
+               find downloads -type f -print0 | while IFS= read -r -d '' file; do
+                curl -g -X POST "https://upload.gofile.io/uploadfile" \
+                     -H "Authorization: Bearer NkEP9nPmjC5bYQB7ZabZKnsUEBi7ww85" \
+                     -F "file=@\"$file\"" \
+                     -F "folderId=33072955-da61-4062-bad6-71f3bc339712"
+                done
