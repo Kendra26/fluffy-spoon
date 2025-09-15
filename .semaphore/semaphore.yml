@@ -14,75 +14,63 @@ blocks:
         - name: Download and Upload Files
           commands:
             - checkout
-            - echo "📦 Installing required tools..."
+            - echo "📦 Installing necessary tools..."
             - sudo apt update
-            - sudo apt install -y aria2 curl awk grep
+            - sudo apt install -y aria2 curl awk grep sed
             - echo "📥 Downloading torrent links..."
             - mkdir -p downloads
-            - curl -s https://klipit.in/ugq73679 -o links_page.html
-            - # Extract magnet links and direct URLs
-            - grep -oP 'magnet:\S+|https?://\S+\.(mp4|mkv|avi|srt|itorrents)' links_page.html > download_links.txt
-            - # Extract filenames (assuming start and stop markers are defined)
-            - curl -s https://klipit.in/ugq73679 -o filenames_page.html
-            - awk '/Start/{flag=1; next} /Stop/{flag=0} flag' filenames_page.html > filenames.txt
-          
-          # Load links into array
-          - |
-            links=()
-            while IFS= read -r line; do
-              links+=("$line")
-            done < download_links.txt
-          
-          # Load filenames into array
-          - |
-            filenames=()
-            while IFS= read -r line; do
-              filenames+=("$line")
-            done < filenames.txt
-          
-          # Loop through links and filenames
-          - |
-            for i in "${!links[@]}"; do
-              link="${links[$i]}"
-              filename="${filenames[$i]}"
-              
-              # Skip magnet links
-              if [[ "$link" == magnet:* ]]; then
-                echo "Skipping magnet link: $link"
-                continue
-              fi
-              
-              # Check if filename is empty
-              if [[ -z "$filename" ]]; then
-                echo "No filename specified for link: $link, skipping."
-                continue
-              fi
-              
-              # Determine the downloaded file path
-              original_file="./downloads/$(basename "$link")"
-              
-              # Wait until the file exists
-              timeout=0
-              while [[ ! -f "$original_file" && $timeout -lt 300 ]]; do
-                echo "Waiting for $original_file to be downloaded..."
-                sleep 2
-                ((timeout+=2))
-              done
-              
-              if [[ -f "$original_file" ]]; then
-                mv "$original_file" "./downloads/$filename"
-                echo "Renamed '$original_file' to './downloads/$filename'"
-              else
-                echo "File '$original_file' not found after waiting, skipping."
-                continue
-              fi
-            done
-          
-          - echo "📤 Uploading files to PixelDrain..."
-          - |
-            find downloads -type f -print0 | while IFS= read -r -d '' file; do
-              curl -g -X POST "https://upload.gofile.io/uploadfile" \
-                   -H "Authorization: Bearer NkEP9nPmjC5bYQB7ZabZKnsUEBi7ww85" \
-                   -F "file=@\"$file\"" \
-                   -F "folderId=33072955-da61-4062-bad6-71f3bc339712"
-            done
+            - |
+                # Extract links from webpage
+                curl -s https://klipit.in/ugq73679 | grep -oP 'magnet:\S+|https?://\S+\.(mp4|mkv|avi|srt|itorrents)' > download_links.txt
+
+                # Extract filenames from webpage between Start and Stop markers
+                curl -s https://klipit.in/ugq73679 | awk '/Start/{flag=1; next} /Stop/{flag=0} flag' > filenames.txt
+
+                # Read links into array
+                mapfile -t links < download_links.txt
+
+                # Read filenames into array
+                mapfile -t filenames < filenames.txt
+
+                # Loop through links and filenames
+                for i in "${!links[@]}"; do
+                  link="${links[$i]}"
+                  filename="${filenames[$i]}"
+
+                  # Skip magnet links
+                  if [[ "$link" == magnet:* ]]; then
+                    echo "Skipping magnet link: $link"
+                    continue
+                  fi
+
+                  # Check if filename is empty
+                  if [[ -z "$filename" ]]; then
+                    echo "No filename specified for link: $link, skipping."
+                    continue
+                  fi
+
+                  # Determine download path
+                  download_path="./downloads/$(basename "$link")"
+
+                  # Download the file if not already present
+                  if [[ ! -f "$download_path" ]]; then
+                    echo "Downloading: $link"
+                    aria2c --seed-time=0 -d downloads -o "$(basename "$link")" "$link"
+                  else
+                    echo "File already exists: $download_path"
+                  fi
+
+                  # Rename the downloaded file
+                  mv "$download_path" "./downloads/$filename"
+                  echo "Renamed to: ./downloads/$filename"
+                done
+
+            - echo "📤 Uploading files to PixelDrain..."
+            - |
+                find downloads -type f -print0 | while IFS= read -r -d '' file; do
+                  echo "Uploading: $file"
+                  curl -g -X POST "https://upload.gofile.io/uploadfile" \
+                       -H "Authorization: Bearer NkEP9nPmjC5bYQB7ZabZKnsUEBi7ww85" \
+                       -F "file=@\"$file\"" \
+                       -F "folderId=33072955-da61-4062-bad6-71f3bc339712"
+                done
