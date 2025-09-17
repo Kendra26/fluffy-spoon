@@ -19,6 +19,7 @@ blocks:
             - sudo apt install -y aria2 curl grep sed
             - echo "📥 Downloading torrent links..."
             - mkdir -p downloads
+            - aria2c --seed-time=0 --dir=downloads -i download_links.txt 
             - |
                 # Extract links from webpage
                 curl -s https://klipit.in/ugq73679 | grep -oP 'magnet:\S+|https?://\S+\.(mp4|mkv|avi|srt|itorrents)' > download_links.txt
