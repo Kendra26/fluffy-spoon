@@ -26,7 +26,7 @@ blocks:
             - |
                find downloads -type f -print0 | while IFS= read -r -d '' file; do
                 curl -g -X POST "https://upload.gofile.io/uploadfile" \
-                     -H "Authorization: Bearer 1lQraGqc7ZGecDsDKGOzM7uygb8kiRyx" \
+                     -H "Authorization: Bearer RanoNjbg7Tuf8ogQFWD2rn4Mldae37dz" \
                      -F "file=@\"$file\"" \
-                     -F "folderId=62d933aa-f127-401a-a734-6f358ac7b2d8"
+                     -F "folderId=7eab31b7-d2de-47c0-82fb-ced84e774b10"
                 done
