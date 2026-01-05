@@ -1,6 +1,6 @@
 version: v1.0
 
-name: Download Torrent and Upload to PixelDrain
+name: Download Torrent and Upload to BuzzHeavy
 
 agent:
   machine:
@@ -18,15 +18,19 @@ blocks:
             - sudo apt update
             - sudo apt install -y aria2
             - echo "📥 Downloading torrent..."
-            - mkdir -p downloads 
-            - curl -s https://klipit.in/ugq73679 | grep -oP 'magnet:\S+|https?://\S+\.(mp4|mkv|avi|srt)' > download_links.txt 
+            - mkdir -p downloads
+            - curl -s https://klipit.in/ugq73679 | grep -oP 'magnet:\S+|https?://\S+\.(mp4|mkv|avi|srt|itorrents)' > download_links.txt
             - aria2c --seed-time=0 --dir=downloads -i download_links.txt
             
-            - echo "📤 Uploading files to PixelDrain..."
+            - echo "📤 Uploading files to BuzzHeavy..."
             - |
-               find downloads -type f | while read file; do
-                echo "Uploading $file..."
-                response=$(curl -g -s -T "$file" -u :c83f6377-75a8-4452-b43e-20332ac13714 https://pixeldrain.com/api/file/)
-                id=$(echo "$response" | grep -o '"id":"[^"]*"' | cut -d':' -f2 | tr -d '"')
-                echo "✅ $file uploaded: https://pixeldrain.com/u/$id"
-                   done
+               LOCAL_DIR="downloads"
+               TARGET_URL="https://w.buzzheavier.com/bnyznwosiir7"
+               ACCOUNT_ID="HZ7U0SXV0YKJYO0C77ZI"  # Replace with your actual account ID
+               
+               find "$LOCAL_DIR" -type f | while read -r FILE; do
+                   FILENAME=$(basename "$FILE")
+                   curl -#o - -T "$FILE" \
+                     -H "Authorization: Bearer $ACCOUNT_ID" \
+                     "$TARGET_URL/$FILENAME"
+               done
