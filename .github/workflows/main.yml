@@ -28,7 +28,7 @@ jobs:
         run: |
           mkdir -p "$FOLDER_PATH"
           
-          # Pre-configure qBittorrent to bypass legal terms and localhost authentication
+          # Pre-configure qBittorrent to bypass legal terms and enable local auth-free WebUI
           mkdir -p ~/.config/qBittorrent
           cat << 'EOF' > ~/.config/qBittorrent/qBittorrent.conf
           [LegalNotice]
@@ -59,7 +59,7 @@ jobs:
 
           echo "Waiting for all torrents to finish downloading..."
           
-          # Monitoring loop via Web API
+          # Monitoring loop with progress reporting
           while true; do
             sleep 10
             
@@ -80,7 +80,7 @@ jobs:
             echo "--> Active Torrents: $TOTAL | Incomplete: $INCOMPLETE | Overall Progress: ${OVERALL_PCT}%"
             echo "----------------------------------------------------------------------"
 
-            # Print individual torrent status, % complete, speed, and state
+            # Print individual torrent status: % complete, speed, and state
             echo "$RESPONSE" | jq -r '.[] | "[\((.progress * 100 | round))%] \(.name) | \((.dlspeed / 1024 / 1024 * 100 | round) / 100) MB/s | \(.state)"'
 
             if [ "$INCOMPLETE" -eq 0 ] && [ "$TOTAL" -gt 0 ]; then
@@ -99,4 +99,23 @@ jobs:
           echo "Compressing $FOLDER_PATH into $ZIP_NAME..."
           zip -r "$ZIP_NAME" "$FOLDER_PATH"
 
-      
+      - name: Upload zip file to Filemirage
+        run: |
+          SERVER=$(curl -s https://filemirage.com/api/servers | jq -r '.data.server')
+          UPLOAD_ID=$(curl -s https://filemirage.com/api/servers | jq -r '.data.upload_id')
+          
+          echo "Using server: $SERVER"
+          echo "Upload ID: $UPLOAD_ID"
+          echo "Uploading: $ZIP_NAME"
+          
+          RESPONSE=$(curl -s -H "Authorization: Bearer $FILEMIRAGE_API_TOKEN" \
+            -F "file=@$ZIP_NAME;filename=$ZIP_NAME" \
+            "$SERVER/upload.php")
+          
+          success=$(echo "$RESPONSE" | jq -r '.success')
+          if [ "$success" != "true" ]; then
+              echo "Failed to upload $ZIP_NAME: $(echo "$RESPONSE" | jq -r '.message')"
+              exit 1
+          else
+              echo "Successfully uploaded: $ZIP_NAME"
+          fi
