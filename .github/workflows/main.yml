@@ -32,12 +32,15 @@ jobs:
           deluged
           sleep 3
 
-          # Add magnet links via Deluge Console
+          # Set default download directory in Deluge daemon
+          deluge-console config -s download_location "$PWD/$FOLDER_PATH"
+
+          # Add magnet links via Deluge Console using --path
           while IFS= read -r link || [ -n "$link" ]; do
             link=$(echo "$link" | tr -d '\r')
             if [ -n "$link" ] && [[ ! "$link" =~ ^# ]]; then
               echo "Adding to Deluge: $link"
-              deluge-console add -p "$PWD/$FOLDER_PATH" "$link"
+              deluge-console add --path="$PWD/$FOLDER_PATH" "$link"
             fi
           done < page.txt
 
