@@ -1,0 +1,98 @@
+Name: Torrent Download & Upload to Filemirage
+
+on:
+  push:
+    branches:
+      - '*'
+  workflow_dispatch:
+
+jobs:
+  torrent-upload:
+    runs-on: ubuntu-latest
+    env:
+      PIXELDRAIN_API_KEY: '9'
+      FILEMIRAGE_API_TOKEN: '9QQH-DGES-CWQZ-FXNV'
+      FOLDER_PATH: 'downloaded_files'
+      ZIP_NAME: 'downloaded_files.zip'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt update && sudo apt install deluged deluge-console jq curl zip -y
+          curl -o page.txt "https://equestria-eta.vercel.app/api/pages/dprjjMvC8fCF/raw"
+
+      - name: Download torrent content with Deluge
+        run: |
+          mkdir -p "$FOLDER_PATH"
+
+          # Start Deluge daemon in background
+          deluged
+          sleep 3
+
+          # Add magnet links via Deluge Console
+          while IFS= read -r link || [ -n "$link" ]; do
+            link=$(echo "$link" | tr -d '\r')
+            if [ -n "$link" ] && [[ ! "$link" =~ ^# ]]; then
+              echo "Adding to Deluge: $link"
+              deluge-console add -p "$PWD/$FOLDER_PATH" "$link"
+            fi
+          done < page.txt
+
+          echo "Waiting for all torrents to finish downloading..."
+
+          # Monitoring loop
+          while true; do
+            sleep 10
+
+            INFO=$(deluge-console info)
+
+            if [ -z "$INFO" ]; then
+              echo "No active torrents found."
+              break
+            fi
+
+            echo "----------------------------------------------------------------------"
+            deluge-console info | grep -E "(Name:|State:|Progress:)"
+            echo "----------------------------------------------------------------------"
+
+            # Check for active non-completed states
+            ACTIVE=$(echo "$INFO" | grep -c -E "State: (Downloading|Queued|Checking|Allocating)" || true)
+
+            if [ "$ACTIVE" -eq 0 ]; then
+              echo "All downloads completed!"
+              break
+            fi
+          done
+
+          # Stop deluge daemon
+          pkill deluged || true
+          sleep 2
+
+      - name: Zip downloaded files
+        run: |
+          echo "Compressing $FOLDER_PATH into $ZIP_NAME..."
+          zip -r "$ZIP_NAME" "$FOLDER_PATH"
+
+      - name: Upload zip file to Filemirage
+        run: |
+          SERVER=$(curl -s https://filemirage.com/api/servers | jq -r '.data.server')
+          UPLOAD_ID=$(curl -s https://filemirage.com/api/servers | jq -r '.data.upload_id')
+          
+          echo "Using server: $SERVER"
+          echo "Upload ID: $UPLOAD_ID"
+          echo "Uploading: $ZIP_NAME"
+          
+          RESPONSE=$(curl -s -H "Authorization: Bearer $FILEMIRAGE_API_TOKEN" \
+            -F "file=@$ZIP_NAME;filename=$ZIP_NAME" \
+            "$SERVER/upload.php")
+          
+          success=$(echo "$RESPONSE" | jq -r '.success')
+          if [ "$success" != "true" ]; then
+              echo "Failed to upload $ZIP_NAME: $(echo "$RESPONSE" | jq -r '.message')"
+              exit 1
+          else
+              echo "Successfully uploaded: $ZIP_NAME"
+          fi
