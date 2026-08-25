@@ -19,26 +19,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
       - name: Install dependencies
         run: |
-          sudo apt update && sudo apt install jq curl zip -y
-          npm install -g webtorrent-cli
+          sudo apt update && sudo apt install -y jq curl zip aria2
           curl -o page.txt "https://equestria-eta.vercel.app/api/pages/dprjjMvC8fCF/raw"
 
-      - name: Download torrent content with WebTorrent
+      - name: Download torrent content with aria2
         run: |
           mkdir -p "$FOLDER_PATH"
 
           while IFS= read -r link || [ -n "$link" ]; do
             link=$(echo "$link" | tr -d '\r')
             if [ -n "$link" ] && [[ ! "$link" =~ ^# ]]; then
-              echo "Downloading via WebTorrent: $link"
-              webtorrent download "$link" -o "$FOLDER_PATH"
+              echo "Downloading via aria2: $link"
+              aria2c --seed-time=0 --summary-interval=10 --dir="$FOLDER_PATH" "$link"
             fi
           done < page.txt
 
