@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update && sudo apt install jq curl zip -y
-          npm install -g webtorrent-cli --ignore-scripts
+          npm install -g webtorrent-cli
           curl -o page.txt "https://equestria-eta.vercel.app/api/pages/dprjjMvC8fCF/raw"
 
       - name: Download torrent content with WebTorrent
