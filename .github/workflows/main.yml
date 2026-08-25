@@ -1,4 +1,4 @@
-Name: Torrent Download & Upload to Filemirage
+name: Torrent Download & Upload to Filemirage
 
 on:
   push:
