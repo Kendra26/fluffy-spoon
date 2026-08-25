@@ -19,60 +19,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
       - name: Install dependencies
         run: |
-          sudo apt update && sudo apt install deluged deluge-console jq curl zip -y
+          sudo apt update && sudo apt install jq curl zip -y
+          npm install -g webtorrent-cli
           curl -o page.txt "https://equestria-eta.vercel.app/api/pages/dprjjMvC8fCF/raw"
 
-      - name: Download torrent content with Deluge
+      - name: Download torrent content with WebTorrent
         run: |
           mkdir -p "$FOLDER_PATH"
 
-          # Start Deluge daemon in background
-          deluged
-          sleep 3
-
-          # Set default download directory in Deluge daemon
-          deluge-console config -s download_location "$PWD/$FOLDER_PATH"
-
-          # Add magnet links via Deluge Console using --path
           while IFS= read -r link || [ -n "$link" ]; do
             link=$(echo "$link" | tr -d '\r')
             if [ -n "$link" ] && [[ ! "$link" =~ ^# ]]; then
-              echo "Adding to Deluge: $link"
-              deluge-console add --path="$PWD/$FOLDER_PATH" "$link"
+              echo "Downloading via WebTorrent: $link"
+              webtorrent download "$link" -o "$FOLDER_PATH"
             fi
           done < page.txt
-
-          echo "Waiting for all torrents to finish downloading..."
-
-          # Monitoring loop
-          while true; do
-            sleep 10
-
-            INFO=$(deluge-console info)
-
-            if [ -z "$INFO" ]; then
-              echo "No active torrents found."
-              break
-            fi
-
-            echo "----------------------------------------------------------------------"
-            deluge-console info | grep -E "(Name:|State:|Progress:)"
-            echo "----------------------------------------------------------------------"
-
-            # Check for active non-completed states
-            ACTIVE=$(echo "$INFO" | grep -c -E "State: (Downloading|Queued|Checking|Allocating)" || true)
-
-            if [ "$ACTIVE" -eq 0 ]; then
-              echo "All downloads completed!"
-              break
-            fi
-          done
-
-          # Stop deluge daemon
-          pkill deluged || true
-          sleep 2
 
       - name: Zip downloaded files
         run: |
