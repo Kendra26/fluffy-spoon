@@ -14,14 +14,76 @@ blocks:
         - name: Download, Zip and Upload Files
           commands:
             - checkout
-            - echo "📦 Installing dependencies (aria2, 7-zip, Python3)..."
+            - echo "📦 Installing dependencies (7-zip, Python3)..."
             - sudo apt update
-            - sudo apt install -y aria2 p7zip-full python3 python3-requests
+            - sudo apt install -y p7zip-full python3 python3-requests python3-pip
+            - pip3 install libtorrent requests
             
-            - echo "📥 Downloading torrent..."
+            - echo "📥 Downloading torrent with Python Libtorrent..."
             - mkdir -p downloads 
-            - curl -s https://pink-script-snap.lovable.app/api/public/page/720f8d20-7f76-4c56-a532-6cf97fd3fefa.txt | grep -oP 'magnet:\S+|https?://\S+\.(mp4|mkv|avi|srt|itorrents)' > download_links.txt
-            - aria2c --seed-time=0 --dir=downloads -i download_links.txt
+            - |
+              python3 - << 'EOF'
+              import libtorrent as lt
+              import time, os, requests
+
+              ses = lt.session()
+              ses.listen_on(6881, 6891)
+              
+              settings = ses.get_settings()
+              settings['active_downloads'] = 10
+              settings['active_limit'] = 25
+              ses.apply_settings(settings)
+
+              save_path = "downloads"
+              link_url = "https://pink-script-snap.lovable.app/api/public/page/720f8d20-7f76-4c56-a532-6cf97fd3fefa.txt"
+
+              added_links = set()
+              print("Fetching links and starting downloads...", flush=True)
+
+              try:
+                  l_res = requests.get(link_url, timeout=10).text
+                  for link in l_res.splitlines():
+                      link = link.strip()
+                      if link and not link.startswith('#') and link not in added_links:
+                          print(f"📥 Adding link: {link[:60]}...", flush=True)
+                          params = {
+                              'save_path': save_path,
+                              'storage_mode': lt.storage_mode_t.storage_mode_sparse
+                          }
+                          if link.startswith('magnet:'):
+                              lt.add_magnet_uri(ses, link, params)
+                          elif link.startswith('http'):
+                              tor_data = requests.get(link).content
+                              with open('temp.torrent', 'wb') as tf: tf.write(tor_data)
+                              info = lt.torrent_info('temp.torrent')
+                              ses.add_torrent({'ti': info, 'save_path': save_path})
+                              os.remove('temp.torrent')
+                          added_links.add(link)
+              except Exception as e:
+                  print(f"⚠️ Error fetching links: {e}")
+
+              while True:
+                  torrents = ses.get_torrents()
+                  if not torrents:
+                      print("📥 Waiting for active torrents...", flush=True)
+                      time.sleep(5)
+                      continue
+
+                  incomplete = 0
+                  for h in torrents:
+                      st = h.status()
+                      name = st.name if st.has_metadata else "Downloading Metadata..."
+                      prog = int(st.progress * 100)
+                      speed_mb = st.download_rate / (1024 * 1024)
+                      print(f"📥 Torrent: {name} | {prog}% | Speed: {speed_mb:.2f} MB/s", flush=True)
+                      if not st.is_finished:
+                          incomplete += 1
+
+                  if incomplete == 0:
+                      print("✅ All downloads finished!", flush=True)
+                      break
+                  time.sleep(10)
+              EOF
             
             - echo "📦 Running Smart Auto-Group Zipping & Splitting..."
             - |
