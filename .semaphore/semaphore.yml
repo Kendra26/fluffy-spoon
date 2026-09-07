@@ -5,7 +5,7 @@ name: Download Torrent and Upload to Gofile
 agent:
   machine:
     type: e1-standard-2
-    os_image: ubuntu2004
+    os_image: ubuntu2204
 
 blocks:
   - name: Download, Zip & Upload
