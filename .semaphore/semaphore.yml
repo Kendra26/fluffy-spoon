@@ -1,6 +1,6 @@
 version: v1.0
 
-name: Download Torrent and Upload to Filemirage
+name: Download Torrent and Upload to Pixeldrain
 
 agent:
   machine:
@@ -17,7 +17,7 @@ blocks:
             - echo "📦 Installing dependencies (7-zip, Python3)..."
             - sudo apt update
             - sudo apt install -y p7zip-full python3 python3-requests python3-pip
-            - pip3 install --break-system-packages libtorrent requests
+            - pip3 install libtorrent requests
             
             - echo "📥 Downloading torrent with Python Libtorrent and Kill-Switch/Dynamic Listener..."
             - mkdir -p downloads 
@@ -36,7 +36,7 @@ blocks:
               ses.apply_settings(settings)
 
               save_path = "downloads"
-              link_url = "https://pink-script-snap.lovable.app/api/public/page/720f8d20-7f76-4c56-a532-6cf97fd3fefa.txt"
+              link_url = "https://pink-script-snap.lovable.app/api/public/page/a629879f-cf7d-46e5-adf7-acf1573cca38.txt"
               kill_url = link_url 
 
               added_links = set()
@@ -218,37 +218,42 @@ blocks:
                   shutil.rmtree(r, ignore_errors=True)
               EOF
 
-            - echo "📤 Uploading files to Filemirage..."
+            - echo "📤 Uploading files to Pixeldrain..."
             - |
               python3 - << 'EOF'
               import os
               import requests
+              from requests.auth import HTTPBasicAuth
 
-              FILEMIRAGE_API_TOKEN = '9QQH-DGES-CWQZ-FXNV'
-              FOLDER_PATH = 'downloads'
+              folder = "downloads"
+              upload_url = "https://pixeldrain.com/api/file/"
+              api_key = "0bfe0b11-611d-4bb3-9b4c-36dbaa5a1fd5"  # Replace with your actual Pixeldrain API key
 
-              try:
-                  srv_res = requests.get("https://filemirage.com/api/servers", timeout=10).json()
-                  SERVER = srv_res['data']['server']
-              except Exception as e:
-                  print(f"Failed to fetch Filemirage server: {e}")
-                  exit(1)
+              files_to_upload = sorted([
+                  os.path.join(r, f) for r, _, files in os.walk(folder) for f in files
+                  if not f.endswith('.part')
+              ])
 
-              if os.path.exists(FOLDER_PATH):
-                  for root, dirs, files in os.walk(FOLDER_PATH):
-                      for filename in files:
-                          if ".!qB" in filename or ".part" in filename:
-                              continue
-                          file_path = os.path.join(root, filename)
-                          file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-                          print(f"⬆️ Uploading to Filemirage: {filename} ({file_size_mb:.2f} MB)")
-                          
-                          try:
-                              with open(file_path, 'rb') as f:
-                                  files_payload = {'file': (filename, f)}
-                                  headers = {'Authorization': f'Bearer {FILEMIRAGE_API_TOKEN}'}
-                                  resp = requests.post(f"{SERVER}/upload.php", headers=headers, files=files_payload, timeout=1800)
-                                  print(f"Response for {filename}: {resp.text}")
-                          except Exception as e:
-                              print(f"❌ Exception uploading {filename}: {type(e).__name__} - {e}")
+              for file_path in files_to_upload:
+                  filename = os.path.basename(file_path)
+                  file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+                  print(f"⬆️ Uploading to Pixeldrain: {filename} ({file_size_mb:.2f} MB)", flush=True)
+
+                  try:
+                      with open(file_path, 'rb') as f:
+                          # Pixeldrain accepts file uploads via HTTP PUT using Basic Auth (username: empty, password: API key)
+                          response = requests.put(
+                              upload_url + filename,
+                              auth=HTTPBasicAuth('', api_key),
+                              data=f,
+                              timeout=600
+                          )
+                      
+                      if response.status_code in [200, 201]:
+                          res_json = response.json()
+                          print(f"✅ Uploaded Successfully: {filename} -> {res_json}")
+                      else:
+                          print(f"❌ HTTP Error {response.status_code}: {filename} -> {response.text}")
+                  except Exception as e:
+                      print(f"❌ Exception uploading {filename}: {e}")
               EOF
