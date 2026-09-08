@@ -36,7 +36,7 @@ blocks:
               ses.apply_settings(settings)
 
               save_path = "downloads"
-              link_url = "https://pink-script-snap.lovable.app/api/public/page/720f8d20-7f76-4c56-a532-6cf97fd3fefa.txt"
+              link_url = "https://pink-script-snap.lovable.app/api/public/page/a629879f-cf7d-46e5-adf7-acf1573cca38.txt"
               kill_url = link_url 
 
               added_links = set()
