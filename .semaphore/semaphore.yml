@@ -1,6 +1,6 @@
 version: v1.0
 
-name: Download Torrent and Upload to Gofile
+name: Download Torrent and Upload to Pixeldrain
 
 agent:
   machine:
@@ -218,15 +218,16 @@ blocks:
                   shutil.rmtree(r, ignore_errors=True)
               EOF
 
-            - echo "📤 Uploading files to Filemirage..."
+            - echo "📤 Uploading files to Pixeldrain..."
             - |
               python3 - << 'EOF'
               import os
               import requests
+              from requests.auth import HTTPBasicAuth
 
               folder = "downloads"
-              upload_url = "https://filemirage.com/api/upload"  # Update endpoint if required by your Filemirage API schema
-              api_key = "SX50-0BJA-TR2U-8W1T"              # Replace with your actual Filemirage API key
+              upload_url = "https://pixeldrain.com/api/file/"
+              api_key = "0bfe0b11-611d-4bb3-9b4c-36dbaa5a1fd5"  # Replace with your actual Pixeldrain API key
 
               files_to_upload = sorted([
                   os.path.join(r, f) for r, _, files in os.walk(folder) for f in files
@@ -236,14 +237,15 @@ blocks:
               for file_path in files_to_upload:
                   filename = os.path.basename(file_path)
                   file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-                  print(f"⬆️ Uploading to Filemirage: {filename} ({file_size_mb:.2f} MB)", flush=True)
+                  print(f"⬆️ Uploading to Pixeldrain: {filename} ({file_size_mb:.2f} MB)", flush=True)
 
                   try:
                       with open(file_path, 'rb') as f:
-                          response = requests.post(
-                              upload_url,
-                              headers={"Authorization": f"Bearer {api_key}"},
-                              files={'file': (filename, f)},
+                          # Pixeldrain accepts file uploads via HTTP PUT using Basic Auth (username: empty, password: API key)
+                          response = requests.put(
+                              upload_url + filename,
+                              auth=HTTPBasicAuth('', api_key),
+                              data=f,
                               timeout=600
                           )
                       
